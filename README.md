@@ -1,6 +1,6 @@
 # mbserver
 
-This is a simple perl script for make a modbus/TCP server for test purpose. 
+This is a simple modbus/TCP server for test purpose, write in pure Perl code.
 
 ## Setup (for Linux):
 1. just copy "mbserverd.pl" to /usr/local/bin/ (it's the script path for user scripts in debian system).
