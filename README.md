@@ -1,4 +1,4 @@
-# mbserver
+# mbserverd
 
 This is a simple modbus/TCP server for test purpose, write in pure Perl code.
 
