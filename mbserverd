@@ -114,13 +114,13 @@ my $paddr;
 CLIENT_ACCEPT:
 while($paddr = accept(Client, Server)) {
   # make a fork for every new connection
-  my $pid_fils;
-  if ($pid_fils = fork) {
+  my $pid_child;
+  if ($pid_child = fork) {
     # father close handle and go wait next connection
     close Client;
     next CLIENT_ACCEPT;
   }
-  defined($pid_fils) or die "unable to fork : $!";
+  defined($pid_child) or die "unable to fork : $!";
   # child close unused handle
   close Server;
   my ($client_port, $client_addr) = sockaddr_in($paddr);
