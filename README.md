@@ -3,9 +3,8 @@
 This is a simple modbus/TCP server for test purpose, write in pure Perl code.
 
 ## Setup (for Linux):
-1. just copy "mbserverd.pl" to /usr/local/bin/ (it's the script path for user scripts in debian system).
-2. set chmod +x /usr/local/bin/mbserver.pl to set execution flag.
-2. set mv /usr/local/bin/mbserverd.pl /usr/local/bin/mbserverd for have a tiny name.
+1. just copy mbserverd to /usr/local/bin/ (it's the script path for user scripts in debian system).
+2. set chmod +x /usr/local/bin/mbserver to set execution flag.
 
 ## Usage example
 
