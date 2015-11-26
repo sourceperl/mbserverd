@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
 
 # Server Modbus/TCP multi-client
-#     Version: 1.3.0
-#     Website: http://source.perl.free.fr
-#        Date: 10/03/2013
+#     Version: 1.4.0
+#     Website: https://github.com/sourceperl/mbserverd
+#        Date: 26/11/2015
 #     License: MIT
 # Description: Server Modbus/TCP multi-threaded 
 #              function build-in: 3, 4, 6 and 16
@@ -12,24 +12,21 @@
 #              (sys V french doc : http://jean-luc.massat.perso.luminy.univmed.fr/ens/docs/IPC.html)
 #              - Open TCP port 502 in listening mode requires privileged "root"
 
-### changelog
-# 1.3.0: code and comment is now in english (more easy to share)
-# 1.1.0: Change header for source code release
-### todo
-# - add arg to the command line call (for modified TCP port ...)
-
 use strict;
 use Sys::Syslog;
 use POSIX;
 use Socket;
 use IPC::SysV qw(IPC_RMID IPC_PRIVATE); # share mem !!! OS Unix only
 
-# must be start by root
-if ($> != 0) {
-  printf STDERR	"modbus server must be run by root\n";
-  log_mesg('modbus server must be run by root, exit');
-  exit 1;
-}
+# constant
+our $VERSION            = '1.4.0';
+my  $MBSERVERD_USAGE        =
+'usage : mbserverd [-hv] [-p port] serveur
+
+command line :
+  -h                    : show this help message
+  -v                    : show version
+  -p port_number        : set TCP port (default 502)';
 
 # some names
 my $syslog_name = 'mbserverd';
@@ -58,6 +55,31 @@ my $EXP_DATA_VALUE           = 0x03;
 # constant
 my $IPPROTO_TCP              = 0x06;
 my $TCP_NODELAY              = 0x01;
+
+# parse command line args
+while(defined($_ = shift @ARGV)) {
+  /^-h$/   and do {print $MBSERVERD_USAGE."\n"; exit 0;};
+  /^-v$/   and do {print 'version: '.$VERSION."\n"; exit 0;};
+  ## tcp port
+  /^-p$/ and do {
+    $_ = shift @ARGV;
+    if ((/^\d{1,5}$/) && ($_ <= 65535) && ($_ > 0)) {
+      $modbus_port = $_; next;
+    } elsif ((/^0x[a-fA-F0-9]{1,4}$/) && (hex($_) > 0)) {
+      $modbus_port = hex($_); next;
+    } else {
+      print STDERR 'option "-p": 1 <= port_number <= 65535.'."\n";
+      exit 1;
+    }
+  };
+}
+
+# check user : must be start by root
+if ($> != 0) {
+  printf STDERR "modbus server must be run by root\n";
+  log_mesg('modbus server must be run by root, exit');
+  exit 1;
+}
 
 # startup message
 log_mesg("modbus server started");

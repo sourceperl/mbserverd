@@ -1,0 +1,10 @@
+Revision history for perl script mbserverd
+
+1.4.0 2015-11-26
+
+     - Add "-p" option to change default TCP port to listening.
+
+1.3.0 2013-03-10
+
+     - Code and comment is now in english (more easy to share).
+
