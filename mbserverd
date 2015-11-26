@@ -7,9 +7,9 @@
 #     License: MIT
 # Description: Server Modbus/TCP multi-threaded 
 #              function build-in: 3, 4, 6 and 16
-#       Notes: - The script uses the share memory mechanism provides by IPC System V for data
-#              exchange between each process (a process by process TCP link + 1 father)
-#              (sys V french doc : http://jean-luc.massat.perso.luminy.univmed.fr/ens/docs/IPC.html)
+#       Notes: - The script uses the share memory mechanism provides by IPC 
+#              System V for data exchange between each process (a process by 
+#..............process TCP link + 1 father)
 #              - Open TCP port 502 in listening mode requires privileged "root"
 
 use strict;
@@ -145,8 +145,10 @@ my $proto = getprotobyname('tcp');
 socket(Server, PF_INET, SOCK_STREAM, $proto);
 setsockopt(Server, SOL_SOCKET, SO_REUSEADDR, 1) or die "setsockopt error $!\n";
 setsockopt(Server, SOL_SOCKET, SO_KEEPALIVE, 1) or die "setsockopt error $!\n";
-setsockopt(Server, $IPPROTO_TCP, $TCP_NODELAY, 1) or die "setsockopt error $!\n";
-bind (Server, sockaddr_in($opt_modbus_port, INADDR_ANY)) or die "bind port error $opt_modbus_port\n";
+setsockopt(Server, $IPPROTO_TCP, $TCP_NODELAY, 1)
+  or die "setsockopt error $!\n";
+bind (Server, sockaddr_in($opt_modbus_port, INADDR_ANY))
+  or die "bind port error $opt_modbus_port\n";
 listen (Server, SOMAXCONN) or die "listen: $!";
 my $paddr;
 # connection loop
@@ -164,10 +166,12 @@ while($paddr = accept(Client, Server)) {
   close Server;
   my ($client_port, $client_addr) = sockaddr_in($paddr);
   my ($head_tr_id, $head_pr_id, $head_length);
-  my ($unit_id, $mb_fc, $bc, $ref, $count, $data, @data, $line, $header, $sent, $frame, $value);
+  my ($unit_id, $mb_fc, $bc, $ref, $count, $data, @data, $line, $header, $sent,
+      $frame, $value);
   # client msg loop
   while(1) {
-    # read 7 bytes header (transaction identifier, protocol identifier, length, unit id)
+    # read 7 bytes header (transaction identifier, protocol identifier, length,
+    # unit id)
     recv Client, $line, 7, MSG_WAITALL;
     # if TCP link is close
     if (length($line) != 7) {
@@ -195,12 +199,14 @@ while($paddr = accept(Client, Server)) {
     # init except var
     my $exp_status = $EXP_NO_EXCEPTION;
     # for every function code
-    if ( ($mb_fc == $READ_HOLDING_REGISTERS) || ($mb_fc == $READ_INPUT_REGISTERS) ) {
+    if ( ($mb_fc == $READ_HOLDING_REGISTERS) || 
+         ($mb_fc == $READ_INPUT_REGISTERS) ) {
       # read some words
       ($ref, $count) = unpack "nn", $line;
       if (($count <= 127) && (shmread $sid, $line, 2*$ref, 2*$count)) {
         $line = pack('n*', unpack 'S*', $line);
-        $header = pack 'nnnCCC', $head_tr_id, $head_pr_id, 2*$count+3, $unit_id, $mb_fc, 2*$count;
+        $header = pack 'nnnCCC', $head_tr_id, $head_pr_id, 2*$count+3, $unit_id,
+                                 $mb_fc, 2*$count;
         $frame = $header . $line;
       } else {
         $exp_status = $EXP_DATA_ADDRESS;
@@ -209,7 +215,8 @@ while($paddr = accept(Client, Server)) {
       # write a word
       ($ref, $value) = unpack "nn", $line;
       if (shmwrite ($sid, pack ('S', $value), 2*$ref, 2)) {
-        $frame = pack 'nnnCCnn', $head_tr_id, $head_pr_id, 6, $unit_id, $mb_fc, $ref, $value;
+        $frame = pack 'nnnCCnn', $head_tr_id, $head_pr_id, 6, $unit_id, $mb_fc,
+                                 $ref, $value;
       } else {
         $exp_status = $EXP_DATA_ADDRESS;
       }
@@ -217,7 +224,8 @@ while($paddr = accept(Client, Server)) {
       # write words
       ($ref, $count, $bc, @data) = unpack 'nnCn*', $line;
       if (shmwrite ($sid, pack ('S*', @data), 2*$ref, 2*$count)) {
-        $frame = pack 'nnnCCnn', $head_tr_id, $head_pr_id, 6, $unit_id, $mb_fc, $ref, $count;
+        $frame = pack 'nnnCCnn', $head_tr_id, $head_pr_id, 6, $unit_id, $mb_fc,
+                                 $ref, $count;
       } else {
         $exp_status = $EXP_DATA_ADDRESS;
       }
@@ -227,7 +235,8 @@ while($paddr = accept(Client, Server)) {
     }
     # if except : build except frame
     if ($exp_status != $EXP_NO_EXCEPTION) {
-      $frame = pack 'nnnCCC', $head_tr_id, $head_pr_id, 3, $unit_id, $mb_fc + 0x80, $exp_status;
+      $frame = pack 'nnnCCC', $head_tr_id, $head_pr_id, 3, $unit_id,
+                              $mb_fc + 0x80, $exp_status;
     }
     # send answer
     send(Client, $frame, 0);
