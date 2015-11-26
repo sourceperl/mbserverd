@@ -8,8 +8,8 @@
 # Description: Server Modbus/TCP multi-threaded 
 #              function build-in: 3, 4, 6 and 16
 #       Notes: - The script uses the share memory mechanism provides by IPC 
-#              System V for data exchange between each process (a process by 
-#..............process TCP link + 1 father)
+#              System V for data exchange between each process (a process for
+#              each TCP link and one father)
 #              - Open TCP port 502 in listening mode requires privileged "root"
 
 use strict;
