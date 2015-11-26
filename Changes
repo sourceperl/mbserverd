@@ -1,5 +1,11 @@
 Revision history for perl script mbserverd
 
+1.6.0 2015-11-26
+
+     - Non-root users can now launch mbserverd if bind to tcp port >= 1024.
+     - Set unbuffered mode for STDOUT/STDERR.
+     - Default PID file /var/run/mbserverd.pid is set only for root daemon mode.
+
 1.5.0 2015-11-26
 
      - Add "-n" option to launch script in the foreground (nodaemon option).

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 # Server Modbus/TCP multi-client
-#     Version: 1.5.0
+#     Version: 1.6.0
 #     Website: https://github.com/sourceperl/mbserverd
 #        Date: 26/11/2015
 #     License: MIT
@@ -19,7 +19,7 @@ use Socket;
 use IPC::SysV qw(IPC_RMID IPC_PRIVATE); # share mem !!! OS Unix only
 
 # constant
-our $VERSION            = '1.5.0';
+our $VERSION            = '1.6.0';
 my  $MBSERVERD_USAGE    =
 'usage : mbserverd [-hvn] [-p port] serveur
 
@@ -28,19 +28,10 @@ command line :
   -v                    : show version
   -n                    : run mbserverd in the foreground (no daemonize)
   -p port_number        : set TCP port (default 502)';
-
-# some names
-my $syslog_name = 'mbserverd';
-my $pidfile     = '/var/run/mbserverd.pid';
-
-# share memory info
-my $shm_flags   = 0666;     # shm flag rw-rw-rw-
-my $shm_size    = 65536*2;  # size of share mem
-# allocate share mem
-my $sid = shmget(IPC_PRIVATE, $shm_size, $shm_flags);
-
-# 
-
+# syslog
+my $SYSLOG_NAME              = 'mbserverd';
+# pid file
+my $PID_FILE                 = '/var/run/mbserverd.pid';
 # ModBus/TCP value
 my $MODBUS_PORT              = 502;
 # protocol ID (field of modbus/TCP header)
@@ -60,8 +51,20 @@ my $IPPROTO_TCP              = 0x06;
 my $TCP_NODELAY              = 0x01;
 
 # default value
-my $opt_modbus_port                             = $MODBUS_PORT;
-my $opt_daemonize                               = 1;
+my $opt_modbus_port          = $MODBUS_PORT;
+my $opt_daemonize            = 1;
+
+# share memory info
+my $shm_flags   = 0666;     # shm flag rw-rw-rw-
+my $shm_size    = 65536*2;  # size of share mem
+# allocate share mem
+my $sid = shmget(IPC_PRIVATE, $shm_size, $shm_flags);
+
+# auto-flush STDOUT and STDERR (need for use with supervisor tail command)
+select(STDERR);
+$| = 1;
+select(STDOUT);
+$| = 1;
 
 # parse command line args
 while(defined($_ = shift @ARGV)) {
@@ -82,10 +85,10 @@ while(defined($_ = shift @ARGV)) {
   };
 }
 
-# check user : must be start by root
-if ($> != 0) {
-  printf STDERR "modbus server must be run by root\n";
-  log_mesg('modbus server must be run by root, exit');
+# check user : must be start by root to listen on tcp port < 1024
+if ($> != 0 and $opt_modbus_port < 1024) {
+  printf STDERR "modbus server must be run by root for bind port < 1024\n";
+  log_mesg('modbus server must be run by root for bind port < 1024, exit');
   exit 1;
 }
 
@@ -98,19 +101,22 @@ if($opt_daemonize) {
   exit 0 if  !(fork == 0);
   # current process is process group leader (main daemon)
   setpgrp(0, 0);
+  # create default PID_FILE for root user and daemonize mode
+  if ($> == 0) {
+    # create default PID file
+    open (PID, ">$PID_FILE");
+    print PID "$$\n";
+    close PID;
+  }
 }
 
-# create PID file
-open (PID, ">$pidfile");
-print PID "$$\n";
-close PID;
 
 # signals setup
 $SIG{TERM} = sub {
   if (getppid() == 1) {
     # for the father process...
     # del PID file and shm memory
-    unlink $pidfile;
+    unlink $PID_FILE;
     # free share memory
     shmctl ($sid, IPC_RMID, 0); 
     # restore default CHLD handler
@@ -236,7 +242,7 @@ while($paddr = accept(Client, Server)) {
 # log_mesg(mesg) write mesg on syslog
 sub log_mesg {
   my ($mesg) = @_;
-  openlog($syslog_name, 'ndelay', 'daemon');
+  openlog($SYSLOG_NAME, 'ndelay', 'daemon');
   syslog('notice', $mesg);
   closelog();
 }
