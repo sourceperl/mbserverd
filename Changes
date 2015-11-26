@@ -1,5 +1,9 @@
 Revision history for perl script mbserverd
 
+1.5.0 2015-11-26
+
+     - Add "-n" option to launch script in the foreground (nodaemon option).
+
 1.4.0 2015-11-26
 
      - Add "-p" option to change default TCP port to listening.

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 # Server Modbus/TCP multi-client
-#     Version: 1.4.0
+#     Version: 1.5.0
 #     Website: https://github.com/sourceperl/mbserverd
 #        Date: 26/11/2015
 #     License: MIT
@@ -19,13 +19,14 @@ use Socket;
 use IPC::SysV qw(IPC_RMID IPC_PRIVATE); # share mem !!! OS Unix only
 
 # constant
-our $VERSION            = '1.4.0';
-my  $MBSERVERD_USAGE        =
-'usage : mbserverd [-hv] [-p port] serveur
+our $VERSION            = '1.5.0';
+my  $MBSERVERD_USAGE    =
+'usage : mbserverd [-hvn] [-p port] serveur
 
 command line :
   -h                    : show this help message
   -v                    : show version
+  -n                    : run mbserverd in the foreground (no daemonize)
   -p port_number        : set TCP port (default 502)';
 
 # some names
@@ -38,8 +39,10 @@ my $shm_size    = 65536*2;  # size of share mem
 # allocate share mem
 my $sid = shmget(IPC_PRIVATE, $shm_size, $shm_flags);
 
+# 
+
 # ModBus/TCP value
-my $modbus_port              = 502;   # ModBus default port
+my $MODBUS_PORT              = 502;
 # protocol ID (field of modbus/TCP header)
 my $MODBUS_PROTOCOL_ID       = 0;
 # functions codes
@@ -56,17 +59,22 @@ my $EXP_DATA_VALUE           = 0x03;
 my $IPPROTO_TCP              = 0x06;
 my $TCP_NODELAY              = 0x01;
 
+# default value
+my $opt_modbus_port                             = $MODBUS_PORT;
+my $opt_daemonize                               = 1;
+
 # parse command line args
 while(defined($_ = shift @ARGV)) {
   /^-h$/   and do {print $MBSERVERD_USAGE."\n"; exit 0;};
   /^-v$/   and do {print 'version: '.$VERSION."\n"; exit 0;};
+  /^-n$/   and do {$opt_daemonize = 0;};
   ## tcp port
   /^-p$/ and do {
     $_ = shift @ARGV;
     if ((/^\d{1,5}$/) && ($_ <= 65535) && ($_ > 0)) {
-      $modbus_port = $_; next;
+      $opt_modbus_port = $_; next;
     } elsif ((/^0x[a-fA-F0-9]{1,4}$/) && (hex($_) > 0)) {
-      $modbus_port = hex($_); next;
+      $opt_modbus_port = hex($_); next;
     } else {
       print STDERR 'option "-p": 1 <= port_number <= 65535.'."\n";
       exit 1;
@@ -84,10 +92,13 @@ if ($> != 0) {
 # startup message
 log_mesg("modbus server started");
 
-# daemonize (call exit for process father)
-exit 0 if  !(fork == 0);
-# current process is process group leader (main daemon)
-setpgrp(0, 0);
+# daemonize
+if($opt_daemonize) {
+  # daemonize (call exit for process father)
+  exit 0 if  !(fork == 0);
+  # current process is process group leader (main daemon)
+  setpgrp(0, 0);
+}
 
 # create PID file
 open (PID, ">$pidfile");
@@ -129,7 +140,7 @@ socket(Server, PF_INET, SOCK_STREAM, $proto);
 setsockopt(Server, SOL_SOCKET, SO_REUSEADDR, 1) or die "setsockopt error $!\n";
 setsockopt(Server, SOL_SOCKET, SO_KEEPALIVE, 1) or die "setsockopt error $!\n";
 setsockopt(Server, $IPPROTO_TCP, $TCP_NODELAY, 1) or die "setsockopt error $!\n";
-bind (Server, sockaddr_in($modbus_port, INADDR_ANY)) or die "bind port error $modbus_port\n";
+bind (Server, sockaddr_in($opt_modbus_port, INADDR_ANY)) or die "bind port error $opt_modbus_port\n";
 listen (Server, SOMAXCONN) or die "listen: $!";
 my $paddr;
 # connection loop
