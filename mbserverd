@@ -21,7 +21,7 @@ use IPC::SysV qw(IPC_RMID IPC_PRIVATE); # share mem !!! OS Unix only
 # constant
 our $VERSION            = '1.6.0';
 my  $MBSERVERD_USAGE    =
-'usage : mbserverd [-hvn] [-p port] serveur
+'usage : mbserverd [-hvn] [-p port]
 
 command line :
   -h                    : show this help message
