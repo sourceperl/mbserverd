@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
 
 # Server Modbus/TCP multi-client
-#     Version: 1.6.0
+#     Version: 1.6.1
 #     Website: https://github.com/sourceperl/mbserverd
-#        Date: 26/11/2015
+#        Date: 03/12/2015
 #     License: MIT
 # Description: Server Modbus/TCP multi-threaded 
 #              function build-in: 3, 4, 6 and 16
@@ -19,7 +19,7 @@ use Socket;
 use IPC::SysV qw(IPC_RMID IPC_PRIVATE); # share mem !!! OS Unix only
 
 # constant
-our $VERSION            = '1.6.0';
+our $VERSION            = '1.6.1';
 my  $MBSERVERD_USAGE    =
 'usage : mbserverd [-hvn] [-p port]
 
@@ -110,30 +110,32 @@ if($opt_daemonize) {
   }
 }
 
-
 # signals setup
-$SIG{TERM} = sub {
-  if (getppid() == 1) {
-    # for the father process...
-    # del PID file and shm memory
+$SIG{TERM} = \&father_exit_handler;
+
+sub father_exit_handler {
+  # for the father process...
+  # del PID file
+  if ($opt_daemonize and ($> == 0)) {
     unlink $PID_FILE;
-    # free share memory
-    shmctl ($sid, IPC_RMID, 0); 
-    # restore default CHLD handler
-    $SIG{CHLD} = 'DEFAULT';
-    # kill childs process (on same process group)
-    local $SIG{TERM} = 'IGNORE'; # avoid deep recursion
-    kill 'TERM', -$$;
-    # wait end of every childs
-    while (wait != -1) {}
-    # close socket
-    close Server;
-  } else {
-    # for child process...
-    # close socket
-    exit 0;
   }
+  # free share memory
+  shmctl ($sid, IPC_RMID, 0); 
+  # restore default CHLD handler
+  $SIG{CHLD} = 'DEFAULT';
+  # kill childs process (on same process group)
+  local $SIG{TERM} = 'IGNORE'; # avoid deep recursion
+  kill 'TERM', -$$;
+  # wait end of every childs
+  while (wait != -1) {}
+  # close socket
+  exit 0;
 };
+
+sub child_exit_handler {
+  # for the child process...
+  exit 0;
+}
 
 # for remove child zombie process
 $SIG{CHLD} = 'IGNORE';
@@ -160,6 +162,9 @@ while($paddr = accept(Client, Server)) {
     # father close handle and go wait next connection
     close Client;
     next CLIENT_ACCEPT;
+  } else {
+    # set child process SIGTERM handle
+    $SIG{TERM} = \&child_exit_handler;
   }
   defined($pid_child) or die "unable to fork : $!";
   # child close unused handle

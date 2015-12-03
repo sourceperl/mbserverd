@@ -1,5 +1,10 @@
 Revision history for perl script mbserverd
 
+
+1.6.1 2015-12-03
+
+     - Change signals handlers for compatibility with supervisor.
+
 1.6.0 2015-11-26
 
      - Non-root users can now launch mbserverd if bind to tcp port >= 1024.
